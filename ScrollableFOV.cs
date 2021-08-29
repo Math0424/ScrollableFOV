@@ -1,4 +1,5 @@
 ﻿using Sandbox.Engine.Platform.VideoMode;
+using Sandbox.Game.World;
 using Sandbox.ModAPI;
 using System;
 using VRage.Input;
@@ -39,36 +40,44 @@ namespace ScrollableFOV
 
                         if (Math.Round(desiredFOV, 2) != Math.Round(g.FieldOfView, 2))
                         {
-                            g.FieldOfView = (float)MathHelper.Lerp(g.FieldOfView, desiredFOV, .15);
-                            MyInput.Static.SetMouseSensitivity(Math.Min(1, g.FieldOfView));
-                            MyVideoSettingsManager.Apply(g);
+                            SetToDesiredFov((float)MathHelper.Lerp(g.FieldOfView, desiredFOV, .15));
                         }
 
                         MyAPIGateway.Utilities.ShowNotification("Fov: " + Math.Round(MathHelper.ToDegrees(g.FieldOfView), 1), 20);
+                    } 
+                    else
+                    {
+                        SetToDesiredFov(desiredFOV);
                     }
-                } 
-                else if(MyAPIGateway.Input.IsKeyPress(MyKeys.Control))
-                {
-                    g.FieldOfView = desiredFOV;
-                    MyInput.Static.SetMouseSensitivity(Math.Min(1, g.FieldOfView));
-                    MyVideoSettingsManager.Apply(g);
                 }
                 else if(g.FieldOfView != originalFOV)
                 {
-                    g.FieldOfView = originalFOV;
+                    SetToDesiredFov(originalFOV);
                     MyInput.Static.SetMouseSensitivity(originalSensitivity);
-                    MyVideoSettingsManager.Apply(g);
                 }
 
             }
         }
 
+        private void SetToDesiredFov(float fov)
+        {
+            var g = MyVideoSettingsManager.CurrentGraphicsSettings;
+            g.FieldOfView = fov;
+            MyInput.Static.SetMouseSensitivity(Math.Min(1, g.FieldOfView));
+            MyVideoSettingsManager.Apply(g);
+        }
+
         public void Init(object gameInstance) 
+        {
+            MySession.AfterLoading += RegisterHandler;
+        }
+
+        private void RegisterHandler()
         {
             MyAPIGateway.Utilities.RegisterMessageHandler(9523876529384576, SetFov);
         }
 
-        public void SetFov(object data)
+        private void SetFov(object data)
         {
             float fov = (float)data;
             if (MyAPIGateway.Session?.Camera != null)
