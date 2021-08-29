@@ -9,7 +9,10 @@ namespace ScrollableFOV
 {
     public class ScrollableFOV : IPlugin
     {
-        float desiredFOV = -1;
+        private float desiredFOV = -1;
+
+        private float originalFOV = -1;
+        private float originalSensitivity = -1;
 
         public void Update()
         {
@@ -19,7 +22,11 @@ namespace ScrollableFOV
                 if (desiredFOV == -1)
                 {
                     if (g.FieldOfView > 1)
+                    {
                         desiredFOV = g.FieldOfView;
+                        originalFOV = desiredFOV;
+                        originalSensitivity = MyInput.Static.GetMouseSensitivity();
+                    }
                     return;
                 }
 
@@ -29,19 +36,52 @@ namespace ScrollableFOV
                     if (delta != 0)
                     {
                         desiredFOV = MathHelper.Clamp(desiredFOV - MathHelper.ToRadians(delta / 100f), 0.018f, 2.5f);
+
+                        if (Math.Round(desiredFOV, 2) != Math.Round(g.FieldOfView, 2))
+                        {
+                            g.FieldOfView = (float)MathHelper.Lerp(g.FieldOfView, desiredFOV, .15);
+                            MyInput.Static.SetMouseSensitivity(Math.Min(1, g.FieldOfView));
+                            MyVideoSettingsManager.Apply(g);
+                        }
+
                         MyAPIGateway.Utilities.ShowNotification("Fov: " + Math.Round(MathHelper.ToDegrees(g.FieldOfView), 1), 20);
                     }
-                }
-
-                if (Math.Round(desiredFOV, 2) != Math.Round(g.FieldOfView, 2))
+                } 
+                else if(MyAPIGateway.Input.IsKeyPress(MyKeys.Control))
                 {
-                    g.FieldOfView = (float)MathHelper.Lerp(g.FieldOfView, desiredFOV, .15);
+                    g.FieldOfView = desiredFOV;
                     MyInput.Static.SetMouseSensitivity(Math.Min(1, g.FieldOfView));
                     MyVideoSettingsManager.Apply(g);
                 }
+                else if(g.FieldOfView != originalFOV)
+                {
+                    g.FieldOfView = originalFOV;
+                    MyInput.Static.SetMouseSensitivity(originalSensitivity);
+                    MyVideoSettingsManager.Apply(g);
+                }
+
             }
         }
-        public void Init(object gameInstance) {}
-        public void Dispose() {}
+
+        public void Init(object gameInstance) 
+        {
+            MyAPIGateway.Utilities.RegisterMessageHandler(9523876529384576, SetFov);
+        }
+
+        public void SetFov(object data)
+        {
+            float fov = (float)data;
+            if (MyAPIGateway.Session?.Camera != null)
+            {
+                var g = MyVideoSettingsManager.CurrentGraphicsSettings;
+                g.FieldOfView = fov;
+            }
+        }
+
+        public void Dispose()
+        {
+            MyAPIGateway.Utilities.UnregisterMessageHandler(9523876529384576, SetFov);
+        }
+
     }
 }
