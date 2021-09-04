@@ -169,7 +169,7 @@ namespace ScrollableFOV
 
         protected override void UnloadData()
         {
-            MyAPIGateway.Utilities.UnregisterMessageHandler(9523876529384576, APIAssignment);
+            MyAPIGateway.Utilities?.UnregisterMessageHandler(9523876529384576, APIAssignment);
         }
 
         private void APIAssignment(object obj)
