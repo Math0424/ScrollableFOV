@@ -102,6 +102,9 @@ namespace ScrollableFOV
 
         public void DoAPIStuff(object obj)
         {
+            if (obj == null || !(obj is string))
+                return;
+
             string[] call = (obj as string).Split(':');
 
             if (call != null && call.Length == 2 && call[0] == "RequestingAPI")
