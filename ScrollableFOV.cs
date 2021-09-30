@@ -7,21 +7,33 @@ using VRage.Game;
 using VRage.Game.Components;
 using VRage.Input;
 using VRage.Plugins;
+using VRage.Utils;
 using VRageMath;
 
 namespace ScrollableFOV
 {
     public class ScrollableFOV : IPlugin
     {
-        private static float desiredFOV = -1;
 
-        private static float originalFOV = -1;
-        private static float originalSensitivity = -1;
-
+        private static float modFOV = -1;
         private static bool ModHasControl = false;
+
+        private static float desiredFOV = -1;
+        private static float originalFOV = -1;
+
+
+        private float originalSensitivity = -1;
+        private bool isRegistered = false;
 
         public void Update()
         {
+            if (MyAPIUtilities.Static != null && !isRegistered)
+            {
+                MyLog.Default.WriteLineAndConsole("ScrollableFOV: Registering mod API");
+                MyAPIUtilities.Static.RegisterMessageHandler(9523876529384576, DoAPIStuff);
+                isRegistered = true;
+            }
+
             if (MyAPIGateway.Session?.Camera != null)
             {
                 var g = MyVideoSettingsManager.CurrentGraphicsSettings;
@@ -32,6 +44,7 @@ namespace ScrollableFOV
                         desiredFOV = g.FieldOfView;
                         originalFOV = desiredFOV;
                         originalSensitivity = MyInput.Static.GetMouseSensitivity();
+                        modFOV = desiredFOV;
                     }
                     return;
                 }
@@ -62,8 +75,11 @@ namespace ScrollableFOV
                         SetToDesiredFov(originalFOV);
                         MyInput.Static.SetMouseSensitivity(originalSensitivity);
                     }
+                } 
+                else
+                {
+                    SetToDesiredFov(modFOV);
                 }
-                
 
             }
         }
@@ -78,8 +94,7 @@ namespace ScrollableFOV
 
         public void Init(object gameInstance) 
         {
-            MySession.AfterLoading += RegisterHandler;
-            MySession.OnUnloading += UnRegisterHandler;
+            MySession.OnUnloading += () => { ModHasControl = false; };
         }
 
         private Dictionary<string, Delegate> ModApiMethods = new Dictionary<string, Delegate>()
@@ -89,16 +104,6 @@ namespace ScrollableFOV
             ["SetModControl"] = new Action<bool>(SetModControl),
             ["DoesModHaveControl"] = new Func<bool>(DoesModHaveControl),
         };
-
-        private void RegisterHandler()
-        {
-            MyAPIGateway.Utilities.RegisterMessageHandler(9523876529384576, DoAPIStuff);
-        }
-        private void UnRegisterHandler()
-        {
-            MyAPIGateway.Utilities.RegisterMessageHandler(9523876529384576, DoAPIStuff);
-            ModHasControl = false;
-        }
 
         public void DoAPIStuff(object obj)
         {
@@ -113,27 +118,19 @@ namespace ScrollableFOV
                 {
                     MyAPIGateway.Utilities.ShowMessage("AnimationAPI", $"Animation API outdated :: Expected '1' Got '{call[1]}'");
                 }
-                MyAPIGateway.Utilities.SendModMessage(9523876529384576, ModApiMethods);
+                MyLog.Default.WriteLineAndConsole("ScrollableFOV: A mod is requesting the mod API!");
+                MyAPIGateway.Utilities.SendModMessage(9523876529384574, ModApiMethods);
             }
         }
 
         public static void SetFov(float fov)
         {
-            if (MyAPIGateway.Session?.Camera != null)
-            {
-                var g = MyVideoSettingsManager.CurrentGraphicsSettings;
-                g.FieldOfView = fov;
-            }
+            modFOV = fov;
         }
 
         public static void ResetFOV()
         {
-            if (MyAPIGateway.Session?.Camera != null)
-            {
-                var g = MyVideoSettingsManager.CurrentGraphicsSettings;
-                g.FieldOfView = originalFOV;
-                MyInput.Static.SetMouseSensitivity(originalSensitivity);
-            }
+            modFOV = originalFOV;
         }
 
         public static void SetModControl(bool value)
@@ -146,36 +143,47 @@ namespace ScrollableFOV
             return ModHasControl;
         }
 
-
-
-        public void Dispose()
-        {
-            UnRegisterHandler();
-        }
-
+        public void Dispose(){}
     }
 
-
-    [MySessionComponentDescriptor(MyUpdateOrder.NoUpdate)]
-    public class FOVAPI : MySessionComponentBase
+    /// <summary>
+    /// Mod API for Scrollable FOV
+    /// Copy and paste this into your mod, call init
+    /// and then use as you want.
+    /// be sure to call Close when the mods shuts down
+    /// </summary>
+    public static class FOVAPI
     {
-        public Action<bool> _SetModControl;
-        public Func<bool> _DoesModHaveControl;
-        public Action _ResetFOV;
-        public Action<float> _SetFOV;
+        private static Action<bool> _SetModControl;
+        private static Func<bool> _DoesModHaveControl;
+        private static Action _ResetFOV;
+        private static Action<float> _SetFOV;
 
-        public override void Init(MyObjectBuilder_SessionComponent sessionComponent)
+        /// <summary>
+        /// Call on init or when you want to use the API
+        /// </summary>
+        public static void Init()
         {
-            MyAPIGateway.Utilities.RegisterMessageHandler(9523876529384576, APIAssignment);
+            MyAPIGateway.Utilities.RegisterMessageHandler(9523876529384574, APIAssignment);
             MyAPIGateway.Utilities.SendModMessage(9523876529384576, "RequestingAPI:1");
         }
 
-        protected override void UnloadData()
+        /// <summary>
+        /// Call on mod close
+        /// </summary>
+        public static void Close()
         {
-            MyAPIGateway.Utilities?.UnregisterMessageHandler(9523876529384576, APIAssignment);
+            MyAPIGateway.Utilities.UnregisterMessageHandler(9523876529384576, APIAssignment);
         }
 
-        private void APIAssignment(object obj)
+        public static void SetModControl(bool hasControl) => _SetModControl.Invoke(hasControl);
+        public static bool DoesModHaveControl() => _DoesModHaveControl.Invoke();
+        public static void ResetFOV() => _ResetFOV.Invoke();
+        public static void SetFOV(float fov) => _SetFOV.Invoke(fov);
+        public static bool IsInstalled() => _SetFOV != null;
+
+
+        private static void APIAssignment(object obj)
         {
             var dict = obj as IReadOnlyDictionary<string, Delegate>;
 
@@ -206,6 +214,8 @@ namespace ScrollableFOV
                 throw new Exception($"FOVAPI :: Delegate {name} is not type {typeof(T)}, instead it's: {del.GetType()}");
         }
     }
+
+
 
 
 }
