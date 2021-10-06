@@ -21,12 +21,16 @@ namespace ScrollableFOV
         private static float desiredFOV = -1;
         private static float originalFOV = -1;
 
-
         private float originalSensitivity = -1;
         private bool isRegistered = false;
 
+        private bool toggledFOV = false;
+        private int lastPress = 0;
+
         public void Update()
         {
+            lastPress--;
+
             if (MyAPIUtilities.Static != null && !isRegistered)
             {
                 MyLog.Default.WriteLineAndConsole("ScrollableFOV: Registering mod API");
@@ -51,10 +55,19 @@ namespace ScrollableFOV
 
                 if (!ModHasControl)
                 {
-                    if (MyAPIGateway.Input.IsKeyPress(MyKeys.CapsLock))
+                    if (MyAPIGateway.Input.IsNewKeyPressed(MyKeys.CapsLock))
+                    {
+                        if (lastPress >= 0)
+                        {
+                            toggledFOV = !toggledFOV;
+                        }
+                        lastPress = 25;
+                    }
+
+                    if (MyAPIGateway.Input.IsKeyPress(MyKeys.CapsLock) || toggledFOV)
                     {
                         float delta = MyAPIGateway.Input.DeltaMouseScrollWheelValue();
-                        if (delta != 0)
+                        if (MyAPIGateway.Input.IsKeyPress(MyKeys.CapsLock) && delta != 0)
                         {
                             desiredFOV = MathHelper.Clamp(desiredFOV - MathHelper.ToRadians(delta / 100f), 0.018f, 2.5f);
 
