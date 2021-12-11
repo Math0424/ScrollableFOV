@@ -27,6 +27,8 @@ namespace ScrollableFOV
         private bool toggledFOV = false;
         private int lastPress = 0;
 
+        private float lerpSpeed = .15f;
+
         public void Update()
         {
             lastPress--;
@@ -64,23 +66,31 @@ namespace ScrollableFOV
                         lastPress = 25;
                     }
 
+                    if (MyAPIGateway.Input.IsKeyPress(MyKeys.Control))
+                    {
+                        if (MyAPIGateway.Input.IsKeyPress(MyKeys.PageUp))
+                        {
+                            lerpSpeed *= 1.02f;
+                        } 
+                        else if(MyAPIGateway.Input.IsKeyPress(MyKeys.PageDown))
+                        {
+                            lerpSpeed /= 1.02f;
+                        }
+                        lerpSpeed = (float)MathHelper.Clamp(lerpSpeed, .01, .50);
+                        MyAPIGateway.Utilities.ShowNotification("Smoothing: " + ((int)(lerpSpeed * 100)), 16);
+                    }
+
                     if (MyAPIGateway.Input.IsKeyPress(MyKeys.CapsLock) || toggledFOV)
                     {
                         float delta = MyAPIGateway.Input.DeltaMouseScrollWheelValue();
                         if (MyAPIGateway.Input.IsKeyPress(MyKeys.CapsLock) && delta != 0)
                         {
                             desiredFOV = MathHelper.Clamp(desiredFOV - MathHelper.ToRadians(delta / 100f), 0.018f, 2.5f);
-
-                            if (Math.Round(desiredFOV, 2) != Math.Round(g.FieldOfView, 2))
-                            {
-                                SetToDesiredFov((float)MathHelper.Lerp(g.FieldOfView, desiredFOV, .15));
-                            }
-
                             MyAPIGateway.Utilities.ShowNotification("Fov: " + Math.Round(MathHelper.ToDegrees(g.FieldOfView), 1), 20);
                         }
-                        else
+                        if (Math.Round(desiredFOV, 2) != Math.Round(g.FieldOfView, 2))
                         {
-                            SetToDesiredFov(desiredFOV);
+                            SetToDesiredFov((float)MathHelper.Lerp(g.FieldOfView, desiredFOV, lerpSpeed));
                         }
                     }
                     else if (g.FieldOfView != originalFOV)
