@@ -93,9 +93,12 @@ namespace ScrollableFOV
                             SetToDesiredFov((float)MathHelper.Lerp(g.FieldOfView, desiredFOV, lerpSpeed));
                         }
                     }
-                    else if (g.FieldOfView != originalFOV)
+                    else if (Math.Round(originalFOV, 2) != Math.Round(g.FieldOfView, 2))
                     {
-                        SetToDesiredFov(originalFOV);
+                        SetToDesiredFov((float)MathHelper.Lerp(g.FieldOfView, originalFOV, lerpSpeed));
+                    }
+                    else
+                    {
                         MyInput.Static.SetMouseSensitivity(originalSensitivity);
                     }
                 } 
