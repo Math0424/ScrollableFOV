@@ -68,6 +68,7 @@ namespace ScrollableFOV
 
                     if (MyAPIGateway.Input.IsKeyPress(MyKeys.Control))
                     {
+                        float prev = lerpSpeed;
                         if (MyAPIGateway.Input.IsKeyPress(MyKeys.PageUp))
                         {
                             lerpSpeed *= 1.02f;
@@ -76,8 +77,12 @@ namespace ScrollableFOV
                         {
                             lerpSpeed /= 1.02f;
                         }
-                        lerpSpeed = (float)MathHelper.Clamp(lerpSpeed, .01, .50);
-                        MyAPIGateway.Utilities.ShowNotification("Smoothing: " + ((int)(lerpSpeed * 100)), 16);
+                        
+                        if (lerpSpeed != prev)
+                        {
+                            lerpSpeed = (float)MathHelper.Clamp(lerpSpeed, .01, .50);
+                            MyAPIGateway.Utilities.ShowNotification("Smoothing: " + ((int)(lerpSpeed * 100)), 16);
+                        }
                     }
 
                     if (MyAPIGateway.Input.IsKeyPress(MyKeys.CapsLock) || toggledFOV)
