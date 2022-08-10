@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using VRage.Game;
 using VRage.Game.Components;
+using VRage.Game.Utils;
 using VRage.Input;
 using VRage.Plugins;
 using VRage.Utils;
@@ -33,7 +34,7 @@ namespace ScrollableFOV
         {
             lastPress--;
 
-            if (MyAPIUtilities.Static != null && !isRegistered)
+            if (!isRegistered && MyAPIUtilities.Static != null)
             {
                 MyLog.Default.WriteLineAndConsole("ScrollableFOV: Registering mod API");
                 MyAPIUtilities.Static.RegisterMessageHandler(9523876529384576, DoAPIStuff);
@@ -42,16 +43,14 @@ namespace ScrollableFOV
 
             if (MyAPIGateway.Session?.Camera != null)
             {
-                var g = MyVideoSettingsManager.CurrentGraphicsSettings;
+                float currFov = MyAPIGateway.Session.Camera.FovWithZoom;
+
                 if (desiredFOV == -1)
                 {
-                    if (g.FieldOfView > 1)
-                    {
-                        desiredFOV = g.FieldOfView;
-                        originalFOV = desiredFOV;
-                        originalSensitivity = MyInput.Static.GetMouseSensitivity();
-                        modFOV = desiredFOV;
-                    }
+                    desiredFOV = currFov;
+                    originalFOV = desiredFOV;
+                    originalSensitivity = MyInput.Static.GetMouseSensitivity();
+                    modFOV = desiredFOV;
                     return;
                 }
 
@@ -91,16 +90,16 @@ namespace ScrollableFOV
                         if (MyAPIGateway.Input.IsKeyPress(MyKeys.CapsLock) && delta != 0)
                         {
                             desiredFOV = MathHelper.Clamp(desiredFOV - MathHelper.ToRadians(delta / 100f), 0.018f, 2.5f);
-                            MyAPIGateway.Utilities.ShowNotification("Fov: " + Math.Round(MathHelper.ToDegrees(g.FieldOfView), 1), 20);
+                            MyAPIGateway.Utilities.ShowNotification("Fov: " + Math.Round(MathHelper.ToDegrees(currFov), 1), 20);
                         }
-                        if (Math.Round(desiredFOV, 2) != Math.Round(g.FieldOfView, 2))
+                        if (Math.Round(desiredFOV, 2) != Math.Round(currFov, 2))
                         {
-                            SetToDesiredFov((float)MathHelper.Lerp(g.FieldOfView, desiredFOV, lerpSpeed));
+                            SetToDesiredFov((float)MathHelper.Lerp(currFov, desiredFOV, lerpSpeed));
                         }
                     }
-                    else if (Math.Round(originalFOV, 2) != Math.Round(g.FieldOfView, 2))
+                    else if (Math.Round(originalFOV, 2) != Math.Round(currFov, 2))
                     {
-                        SetToDesiredFov((float)MathHelper.Lerp(g.FieldOfView, originalFOV, lerpSpeed));
+                        SetToDesiredFov((float)MathHelper.Lerp(currFov, originalFOV, lerpSpeed));
                     }
                     else
                     {
@@ -117,10 +116,8 @@ namespace ScrollableFOV
 
         private void SetToDesiredFov(float fov)
         {
-            var g = MyVideoSettingsManager.CurrentGraphicsSettings;
-            g.FieldOfView = fov;
-            MyInput.Static.SetMouseSensitivity(Math.Min(1, g.FieldOfView));
-            MyVideoSettingsManager.Apply(g);
+            ((MyCamera)MyAPIGateway.Session.Camera).FieldOfView = fov;
+            MyInput.Static.SetMouseSensitivity(Math.Min(1, fov));
         }
 
         public void Init(object gameInstance) 
