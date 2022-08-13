@@ -1,4 +1,5 @@
 ﻿using Sandbox.Engine.Platform.VideoMode;
+using Sandbox.Game.Entities;
 using Sandbox.Game.World;
 using Sandbox.ModAPI;
 using System;
@@ -116,8 +117,11 @@ namespace ScrollableFOV
 
         private void SetToDesiredFov(float fov)
         {
-            ((MyCamera)MyAPIGateway.Session.Camera).FieldOfView = fov;
-            MyInput.Static.SetMouseSensitivity(Math.Min(1, fov));
+            if (!(MyAPIGateway.Session.CameraController is MyCameraBlock))
+            {
+                ((MyCamera)MyAPIGateway.Session.Camera).FieldOfView = fov;
+                MyInput.Static.SetMouseSensitivity(Math.Min(1, fov));
+            }
         }
 
         public void Init(object gameInstance) 
