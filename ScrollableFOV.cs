@@ -1,7 +1,9 @@
 ﻿using Sandbox.Engine.Platform.VideoMode;
 using Sandbox.Game.Entities;
+using Sandbox.Game.Weapons;
 using Sandbox.Game.World;
 using Sandbox.ModAPI;
+using SpaceEngineers.Game.Entities.Blocks;
 using System;
 using System.Collections.Generic;
 using VRage.Game;
@@ -117,7 +119,7 @@ namespace ScrollableFOV
 
         private void SetToDesiredFov(float fov)
         {
-            if (!(MyAPIGateway.Session.CameraController is MyCameraBlock))
+            if (!(MyAPIGateway.Session.CameraController is MyCameraBlock) && !(MyAPIGateway.Session.CameraController is MyUserControllableGun))
             {
                 ((MyCamera)MyAPIGateway.Session.Camera).FieldOfView = fov;
                 MyInput.Static.SetMouseSensitivity(Math.Min(1, fov));
