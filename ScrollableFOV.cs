@@ -1,13 +1,10 @@
-﻿using Sandbox.Engine.Platform.VideoMode;
+﻿using HarmonyLib;
 using Sandbox.Game.Entities;
 using Sandbox.Game.Weapons;
 using Sandbox.Game.World;
 using Sandbox.ModAPI;
-using SpaceEngineers.Game.Entities.Blocks;
 using System;
 using System.Collections.Generic;
-using VRage.Game;
-using VRage.Game.Components;
 using VRage.Game.Utils;
 using VRage.Input;
 using VRage.Plugins;
@@ -25,13 +22,35 @@ namespace ScrollableFOV
         private static float desiredFOV = -1;
         private static float originalFOV = -1;
 
-        private float originalSensitivity = -1;
         private bool isRegistered = false;
 
         private bool toggledFOV = false;
         private int lastPress = 0;
 
         private float lerpSpeed = .15f;
+
+        private static float inhibitor;
+
+        public ScrollableFOV()
+        {
+            Harmony harm = new Harmony("ScrollableFOV");
+            harm.Patch(AccessTools.DeclaredMethod(typeof(MyVRageInput), "GetMouseXForGamePlay"), null, new HarmonyMethod(typeof(ScrollableFOV), nameof(GetPositionDelta)));
+            harm.Patch(AccessTools.DeclaredMethod(typeof(MyVRageInput), "GetMouseYForGamePlay"), null, new HarmonyMethod(typeof(ScrollableFOV), nameof(GetPositionDelta)));
+            harm.Patch(AccessTools.DeclaredMethod(typeof(MyVRageInput), "GetMouseXForGamePlayF"), null, new HarmonyMethod(typeof(ScrollableFOV), nameof(GetPositionDeltaF)));
+            harm.Patch(AccessTools.DeclaredMethod(typeof(MyVRageInput), "GetMouseYForGamePlayF"), null, new HarmonyMethod(typeof(ScrollableFOV), nameof(GetPositionDeltaF)));
+        }
+
+        private static void GetPositionDeltaF(ref float __result)
+        {
+            if (inhibitor != 0)
+                __result = (__result * inhibitor);
+        }
+
+        private static void GetPositionDelta(ref int __result)
+        {
+            if (inhibitor != 0)
+                __result = (int)(__result * inhibitor);
+        }
 
         public void Update()
         {
@@ -52,7 +71,6 @@ namespace ScrollableFOV
                 {
                     desiredFOV = currFov;
                     originalFOV = desiredFOV;
-                    originalSensitivity = MyInput.Static.GetMouseSensitivity();
                     modFOV = desiredFOV;
                     return;
                 }
@@ -74,12 +92,12 @@ namespace ScrollableFOV
                         if (MyAPIGateway.Input.IsKeyPress(MyKeys.PageUp))
                         {
                             lerpSpeed *= 1.02f;
-                        } 
-                        else if(MyAPIGateway.Input.IsKeyPress(MyKeys.PageDown))
+                        }
+                        else if (MyAPIGateway.Input.IsKeyPress(MyKeys.PageDown))
                         {
                             lerpSpeed /= 1.02f;
                         }
-                        
+
                         if (lerpSpeed != prev)
                         {
                             lerpSpeed = (float)MathHelper.Clamp(lerpSpeed, .01, .50);
@@ -106,14 +124,18 @@ namespace ScrollableFOV
                     }
                     else
                     {
-                        MyInput.Static.SetMouseSensitivity(originalSensitivity);
+                        inhibitor = 0;
                     }
-                } 
+                }
                 else
                 {
                     SetToDesiredFov(modFOV);
                 }
 
+            }
+            else
+            {
+                desiredFOV = -1;
             }
         }
 
@@ -122,11 +144,11 @@ namespace ScrollableFOV
             if (!(MyAPIGateway.Session.CameraController is MyCameraBlock) && !(MyAPIGateway.Session.CameraController is MyUserControllableGun))
             {
                 ((MyCamera)MyAPIGateway.Session.Camera).FieldOfView = fov;
-                MyInput.Static.SetMouseSensitivity(Math.Min(1, fov));
+                inhibitor = Math.Min(1, fov);
             }
         }
 
-        public void Init(object gameInstance) 
+        public void Init(object gameInstance)
         {
             MySession.OnUnloading += () => { ModHasControl = false; };
         }
@@ -177,7 +199,7 @@ namespace ScrollableFOV
             return ModHasControl;
         }
 
-        public void Dispose(){}
+        public void Dispose() { }
     }
 
     /// <summary>
