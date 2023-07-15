@@ -1,10 +1,14 @@
 ﻿using HarmonyLib;
+using Sandbox.Engine.Utils;
 using Sandbox.Game.Entities;
+using Sandbox.Game.Entities.Character;
 using Sandbox.Game.Weapons;
 using Sandbox.Game.World;
 using Sandbox.ModAPI;
+using SpaceEngineers.Game.Entities.Blocks;
 using System;
 using System.Collections.Generic;
+using VRage;
 using VRage.Game.Utils;
 using VRage.Input;
 using VRage.Plugins;
@@ -141,9 +145,11 @@ namespace ScrollableFOV
 
         private void SetToDesiredFov(float fov)
         {
-            if (!(MyAPIGateway.Session.CameraController is MyCameraBlock) && !(MyAPIGateway.Session.CameraController is MyUserControllableGun))
+            if ((MyAPIGateway.Session.CameraController is MyCharacter) || 
+                (MyAPIGateway.Session.CameraController is MyCockpit) ||
+                (MyAPIGateway.Session.CameraController is MySpectatorCameraController))
             {
-                ((MyCamera)MyAPIGateway.Session.Camera).FieldOfView = fov;
+                MySector.MainCamera.FieldOfView = fov;
                 inhibitor = Math.Min(1, fov);
             }
         }
